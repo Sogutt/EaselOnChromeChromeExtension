@@ -19,22 +19,28 @@ async function getUserIdFromStorage() {
 
 
 
+
+
 async function saveSnapshot(payload) {
-    const { snapshotBase64, url, coordinates } = payload
-    console.log('saving snapshot: ', snapshotBase64)
+    const { snapshotBase64, url, coordinates, pixelRatio } = payload
+    // console.log('saving snapshot: ', snapshotBase64)
     const user_details = await getUserIdFromStorage();
-    const [user_id, user_email] = user_details.split('|')
-    console.log('user deets: ', user_id, user_email)
+    console.log('user_details: ', user_details)
+
+    const { user_id, user_email } = user_details;
+
+    // console.log('user deets: ', user_id, user_email)
 
     // var formData = new FormData();
     // formData.append('snapshotBase64', snapshotBase64);
     // formData.append('url', 'test5.com');
     // formData.append('user_id', user_id);
 
-
+    console.log('pixelRatio: ', pixelRatio)
     //upload to S3 here or make call to server to upload form webapp
+    //switch
     // const URI = "http://localhost:3000/api/handle-brand-new-snapshot"
-    const URI = "https://easelon-chrome.vercel.app/api/handle-brand-new-snapshot"
+    const URI = "https://www.easelonchrome.com/api/handle-brand-new-snapshot"
 
 
 
@@ -43,7 +49,13 @@ async function saveSnapshot(payload) {
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ snapshotBase64: snapshotBase64, url, user_id, coordinates }),
+        body: JSON.stringify({
+            snapshotBase64: snapshotBase64,
+            url,
+            user_id,
+            coordinates,
+            pixelRatio
+        }),
     })
 
     // const response = await fetch(uri, {
@@ -135,8 +147,8 @@ chrome.runtime.onMessage.addListener((async function (event, t, sendResponse) {
         console.log('snapshot captured: ', event)
         let currentTab = await getCurrentTab()
         console.log('currentTab: ', currentTab)
-        chrome.tabs.captureVisibleTab(null, { format: "jpeg" }, (async function (snapshotBase64) {
-
+        chrome.tabs.captureVisibleTab(null, { format: "png" }, (async function (snapshotBase64) {
+            // console.log('snapshotBase64: ', snapshotBase64)
             if (chrome.runtime.lastError) {
                 console.log("ERROR in captureVisibleTab")
                 sendResponse({ error: chrome.runtime.lastError })
@@ -145,8 +157,12 @@ chrome.runtime.onMessage.addListener((async function (event, t, sendResponse) {
             // console.log("TOOK SNAPSHOT: ", snapshotBase64)
 
             // save(e.rectData, e.screenData, e.deviceData, t, e.url, e.order, e.uid), r({ imageCaptured: t })
-            const payload = { snapshotBase64, url: currentTab.url, coordinates: event.coord }
+            const payload = { snapshotBase64, url: currentTab.url, coordinates: event.coord, pixelRatio: event.pixelRatio }
             await saveSnapshot(payload)
+            //switch
+            var newURL = "https://www.easelonchrome.com/dashboard";
+            // var newURL = "http://localhost:3000/dashboard"
+            chrome.tabs.create({ url: newURL });
         }))
 
 
@@ -156,9 +172,9 @@ chrome.runtime.onMessage.addListener((async function (event, t, sendResponse) {
     // if (event.command === "takeSnapshot") {
     //     console.log('taking snapshot')
     //     //null = current visible tab
-    //     return chrome.tabs.captureVisibleTab(null, { format: "jpeg" }, (function (snapshotBase64) {
+    //     return chrome.tabs.captureVisibleTab(null, { format: "png" }, (function (snapshotBase64) {
     //         if (chrome.runtime.lastError) {
-    //             sendResponse({ error: chrome.runtime.lastError })
+    //             sxendResponse({ error: chrome.runtime.lastError })
     //             console.log("ERROR")
     //         }
     //         console.log("TOOK SNAPSHOT: ", snapshotBase64)
@@ -176,7 +192,7 @@ function injectWebsite(e) {
 
 function captureTab(newWindowId, currentWindowId) { //e: newWindowId, t:currentWindowId
     return new Promise(((r, n) => {
-        chrome.tabs.captureVisibleTab(newWindowId, { format: "jpeg" }, (function (n) {
+        chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (function (n) {
             const lastError = chrome.runtime.lastError;
             if (lastError && !n) {
                 console.log("ERROR CAPTURE TAB: ", lastError)
@@ -196,7 +212,27 @@ function captureTab(newWindowId, currentWindowId) { //e: newWindowId, t:currentW
 chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendResponse) {
     console.log('external message: ', msg)
 
+
+    if (msg.command === "isUserSignedIn") {
+        const user_details = await getUserIdFromStorage();
+        console.log('user_details: ', user_details)
+        const { user_id, user_email } = user_details;
+        if (!user_id || !user_email) {
+            sendResponse({ user_id: null, user_email: null })
+        } else {
+            sendResponse({ user_id, user_email })
+        }
+    }
+
+    if (msg.command === "userSignedOut") {
+        console.log('user has signed out')
+        chrome.storage.sync.set({ user_details: {} }, function () {
+            console.log('User ID removed');
+        });
+    }
+
     if (msg.command === "processJWT") {
+        //this means someone logged in on the webapp
         console.log('heyooooo processing JWT')
         const nestedJWT = msg.payload
         console.log('nestedJWT: ', nestedJWT)
@@ -218,11 +254,12 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         const { result2 } = await response2.json();
         console.log('decrypt result: ', result2)
 
-        chrome.storage.sync.set({ user_details: result2.sub }, function () {
+        const parsed = JSON.parse(result2.sub)
+        chrome.storage.sync.set({ user_details: parsed }, function () {
             console.log('User ID stored successfully');
         });
 
-        sendResponse({ success: "true", decoded: result2 })
+        sendResponse({ success: "true" })
     }
 
     if (msg.command === "createWindow") {
@@ -260,20 +297,20 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
 
     if (msg.command === "refreshPortal") {
         console.log('refreshPortal')
-        if (msg.newWindowId == "" || !msg.newWindowId) return sendResponse({ response: "responding" })
+        if (msg.newWindowId == "" || !msg.newWindowId) return sendResponse({ error: "missing newWindowId" })
 
 
         chrome.windows.update(msg.newWindowId, { width: msg.screenWidth, height: msg.screenHeight });
 
-        const timeoutMap = msg.specialSites
+        const timeoutMap = msg.timeoutMap
         //TODO handle case when url is missing?
         const domainName = msg.url.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0]
         const timeout = timeoutMap[domainName] || timeoutMap.default;
 
         //the regex and split gets the domain name
-        //then we index into specialSites with t[domain_name OR just use the default timeout (t.default)]
+        //then we index into timeoutMap with t[domain_name OR just use the default timeout (t.default)]
 
-
+        console.log('TIMEOUT: ', timeout)
         return chrome.scripting.executeScript({
             target: { tabId: msg.newTabId },
             func: injectWebsite,
@@ -283,14 +320,10 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
                 captureTab(msg.newWindowId, msg.currentWindowId).then((e => {
                     sendResponse({ image: e })
                 })).catch((e => {
-                    sendResponse()
+                    sendResponse({ error: e })
                     console.error("Error:", e)
                 }))
             }), timeout)
         }))
-
-
     }
-
-
 }))

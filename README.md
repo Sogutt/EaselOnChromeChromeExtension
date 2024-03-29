@@ -2,6 +2,8 @@
 
 My Chrome Extension
 
+Run via: npm run watch
+
 ## Features
 
 - Feature 1

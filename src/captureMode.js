@@ -26,6 +26,9 @@ const captureRectStyle = `
 // const overlayDiv = document.createElement('div');
 // overlayDiv.setAttribute('style', overlayStyle);
 
+const pixelRatio = window.devicePixelRatio
+console.log('pixelRatio: ', pixelRatio)
+
 const captureRect = document.createElement('div');
 captureRect.setAttribute('style', captureRectStyle);
 
@@ -33,6 +36,9 @@ captureRect.setAttribute('style', captureRectStyle);
 // document.body.appendChild(overlayDiv);
 document.body.appendChild(captureRect);
 
+
+let startX, startY, endX, endY;
+let isCaptureMode = false
 
 
 function cleanup() {
@@ -42,35 +48,38 @@ function cleanup() {
     // overlayDiv.remove();
     captureRect.remove();
     const coord = { startX, startY, endX, endY }
-    console.log('sending message back to background: ', coord)
-    chrome.runtime.sendMessage({ command: 'screenshotCaptured', coord });
+    console.dir(coord)
+    chrome.runtime.sendMessage({ command: 'screenshotCaptured', coord, pixelRatio });
 }
-
-let startX, startY, endX, endY;
-let isCaptureMode = false
 
 
 function onMouseDown(event) {
     isCaptureMode = true
-    startX = event.pageX;
-    startY = event.pageY;
+    // startX = event.pageX;
+    // startY = event.pageY;
+    startX = event.clientX;
+    startY = event.clientY;
     captureRect.style.top = startY + 'px'
     captureRect.style.left = startX + 'px'
 }
 
 function onMouseMove(event) {
     if (!isCaptureMode) return;
-    endX = event.pageX;
-    endY = event.pageY;
+    // endX = event.pageX;
+    // endY = event.pageY;
+    endX = event.clientX;
+    endY = event.clientY;
     drawSelectionBox(endX, endY);
 }
 
 
 function onMouseUp(event) {
     if (!isCaptureMode) return;
-    endX = event.pageX;
-    endY = event.pageY;
-    drawSelectionBox();
+    // endX = event.pageX;
+    // endY = event.pageY;
+    endX = event.clientX;
+    endY = event.clientY;
+    // drawSelectionBox(endX, endY);
     isSnapshotMode = false;
     // Capture the selected area and do something with it
     // Example: captureScreenshot(startX, startY, endX, endY);
@@ -81,12 +90,13 @@ function onMouseUp(event) {
 function drawSelectionBox(endX, endY) {
     let w = endX - startX
     let h = endY - startY
+
     let width = w + 'px'
     let height = h + 'px'
     captureRect.style.width = width
     captureRect.style.height = height
-    console.log(endX, endY, width, height)
-
+    captureRect.innerHTML = `${startX}, ${startY} - ${endX}, ${endY}`;
+    // console.log(endX, endY, width, height)
 }
 
 document.addEventListener('mousedown', onMouseDown);

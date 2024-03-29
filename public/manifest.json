@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "description": "My Chrome Extension",
   "icons": {
-    "16": "icons/icon_16.png",
-    "32": "icons/icon_32.png",
-    "48": "icons/icon_48.png",
-    "128": "icons/icon_128.png"
+    "16": "icons/favicon-16.png",
+    "32": "icons/favicon-32.png",
+    "48": "icons/favicon-96.png",
+    "128": "icons/favicon-128.png"
   },
   "background": {
     "service_worker": "background.js"
@@ -32,7 +32,8 @@
     "matches": [
       "https://localhost:3000/*",
       "http://localhost:3000/*",
-      "https://mondrian-app-two.vercel.app/*"
+      "https://mondrian-app-two.vercel.app/*",
+      "https://www.easelonchrome.com/*"
     ]
   },
   "content_scripts": [
