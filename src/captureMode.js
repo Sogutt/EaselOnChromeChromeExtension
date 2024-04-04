@@ -1,55 +1,54 @@
-// document.body.style.backgroundColor = "orange";
+console.log('capture mode active')
 document.body.style.userSelect = 'none';
 
-// const overlayStyle = `
-//   position: fixed;
-//   top: 0;
-//   left: 0;
-//   width: 100%;
-//   height: 100%;
-//   background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent gray */
-//   z-index: 9998; /* Ensure it's above other elements */
-// `;
-
 const captureRectStyle = `
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   border: 2px dashed white;
-  z-index: 9999; /* Ensure it's above other elements */
+  z-index: 99999;
 `;
 
-//not working currently
-// document.body.style.cursor = 'crosshair';
-
-// Create a div element for the overlay
-// const overlayDiv = document.createElement('div');
-// overlayDiv.setAttribute('style', overlayStyle);
-
 const pixelRatio = window.devicePixelRatio
-console.log('pixelRatio: ', pixelRatio)
 
 const captureRect = document.createElement('div');
 captureRect.setAttribute('style', captureRectStyle);
 
-// Append the overlay div to the body
-// document.body.appendChild(overlayDiv);
 document.body.appendChild(captureRect);
 
-
+let pageStartX, pageStartY, pageEndX, pageEndY;
 let startX, startY, endX, endY;
 let isCaptureMode = false
 
+//clientX and Y ARE what we need for the underlying coordinates for the snapshot - because it takes into account the entire page, 
+//not just browser window. However, we need pageX and Y when drawing the rectangle
 
-function cleanup() {
+
+function cleanup(scrollTop) {
+    document.body.style.userSelect = '';
     document.removeEventListener('mousedown', onMouseDown);
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
-    // overlayDiv.remove();
     captureRect.remove();
-    const coord = { startX, startY, endX, endY }
-    console.dir(coord)
-    chrome.runtime.sendMessage({ command: 'screenshotCaptured', coord, pixelRatio });
+
+    const screenWidth = window.screen.width;
+    const screenHeight = window.screen.height;
+
+    const rectData = {
+        scrollTop,
+        startX,
+        startY,
+        endX,
+        endY,
+    }
+
+    console.dir(rectData)
+
+    chrome.runtime.sendMessage({
+        command: 'screenshotCaptured',
+        rectData,
+        screenData: { screenWidth, screenHeight, pixelRatio },
+    });
 }
 
 
@@ -57,10 +56,15 @@ function onMouseDown(event) {
     isCaptureMode = true
     // startX = event.pageX;
     // startY = event.pageY;
+
+    pageStartX = event.pageX;
+    pageStartX = event.pageY;
+
     startX = event.clientX;
     startY = event.clientY;
-    captureRect.style.top = startY + 'px'
+
     captureRect.style.left = startX + 'px'
+    captureRect.style.top = startY + 'px'
 }
 
 function onMouseMove(event) {
@@ -81,22 +85,24 @@ function onMouseUp(event) {
     endY = event.clientY;
     // drawSelectionBox(endX, endY);
     isSnapshotMode = false;
-    // Capture the selected area and do something with it
-    // Example: captureScreenshot(startX, startY, endX, endY);
-    cleanup();
+    pageEndX = event.pageX;
+    pageEndY = event.pageY;
+
+    document.body.style.userSelect = 'auto';
+
+    const scrollTop = window.pageYOffset //|| document.documentElement.scrollTop || document.body.scrollTop;
+    const windowScrollY = window.scrollY;
+    console.log('scrollTop: ', scrollTop, windowScrollY)
+    cleanup(scrollTop);
 }
 
 
 function drawSelectionBox(endX, endY) {
-    let w = endX - startX
-    let h = endY - startY
-
-    let width = w + 'px'
-    let height = h + 'px'
-    captureRect.style.width = width
-    captureRect.style.height = height
-    captureRect.innerHTML = `${startX}, ${startY} - ${endX}, ${endY}`;
-    // console.log(endX, endY, width, height)
+    let diffX = endX - startX
+    let diffY = endY - startY
+    captureRect.style.width = diffX + 'px'
+    captureRect.style.height = diffY + 'px'
+    // captureRect.innerHTML = `${startX}, ${startY} - ${endX}, ${endY}`;
 }
 
 document.addEventListener('mousedown', onMouseDown);

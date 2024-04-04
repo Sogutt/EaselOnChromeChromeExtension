@@ -82,17 +82,21 @@
 
 <body>
   <div class="test">Easel on Chrome</div>
-  <!-- <button id="captureScreenshotButton">Capture Screenshot</button> -->
   <br />
   <br />
   <br />
   <br />
   <br />
-  <div id="welcome_message">
+  <div id="welcome_message"></div>
+
+  <div id="login_message" hidden>
+    Login <span id="redirectButton" style="color:orange;cursor: pointer;text-decoration: underline;">here</span>
+    to capture snapshots
   </div>
+
   <br />
   <br />
-  <button class="cta shiny" id="takeSnapshot">Take Snapshot</button>
+  <button class="cta shiny" id="takeSnapshot" disabled>Take Snapshot</button>
 
 </body>
 
