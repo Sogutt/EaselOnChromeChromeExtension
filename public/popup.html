@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>My Chrome Extension</title>
+  <title>Easel on Chrome</title>
   <script src="popup.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,20 +25,20 @@
       text-align: center;
     }
 
+    .cta:hover {
+      background: #f59e0b;
+    }
 
-    .shiny::after {
+
+    /* .shiny::after {
       content: '';
       display: block;
       width: 70%;
       background: rgba(255, 255, 255, 0.2);
       background: linear-gradient(0deg, rgba(255, 255, 255, 0.2)50%, rgba(255, 255, 255, 0.7)100%);
-      /* Safari 5.1-6.0 */
       background: -o-linear-gradient(0deg, rgba(255, 255, 255, 0.2)50%, rgba(255, 255, 255, 0.7)100%);
-      /* Opera 11.1-12.0 */
       background: -moz-linear-gradient(0deg, rgba(255, 255, 255, 0.2)50%, rgba(255, 255, 255, 0.7)100%);
-      /* Firefox 3.6-15 */
       background: linear-gradient(0deg, rgba(255, 255, 255, 0.2)50%, rgba(255, 255, 255, 0.7)100%);
-      /* Standard syntax */
 
       left: -100%;
       top: 0;
@@ -50,20 +50,18 @@
       -o-transition: none;
       -ms-transition: none;
       -ms-transform: skewX(-20deg);
-      /* IE 9 */
       -webkit-transform: skewX(-20deg);
-      /* Safari */
       transform: skewX(-20deg);
-    }
+    } */
 
-    .shiny:hover::after {
+    /* .shiny:hover::after {
       left: 150%;
       transition: all 1s;
       -webkit-transition: all 1s;
       -moz-transition: all 1s;
       -o-transition: all 1s;
       -ms-transition: all 1s;
-    }
+    } */
 
     @font-face {
       font-family: "Racing Sans One", sans-serif;
@@ -72,32 +70,37 @@
       src: url('./racing_sans_one.woff') format('woff');
     }
 
-    .test {
+    .title {
       font-family: 'Racing Sans One';
       font-size: 26px;
-
     }
   </style>
 </head>
 
 <body>
-  <div class="test">Easel on Chrome</div>
+  <div class="title">Easel on Chrome</div>
   <br />
   <br />
   <br />
   <br />
   <br />
-  <div id="welcome_message"></div>
+  <div id="welcome-message"></div>
 
-  <div id="login_message" hidden>
-    Login <span id="redirectButton" style="color:orange;cursor: pointer;text-decoration: underline;">here</span>
+  <div id="login-message" hidden>
+    Login <span id="redirect-button" style="color:orange;cursor: pointer;text-decoration: underline;">here</span>
     to capture snapshots
   </div>
 
-  <br />
-  <br />
-  <button class="cta shiny" id="takeSnapshot" disabled>Take Snapshot</button>
 
+
+  <br />
+  <br />
+  <!-- <button class="cta shiny" id="takeSnapshot" disabled>Take Snapshot</button> -->
+  <button class="cta" id="take-snapshot">Take Snapshot</button>
+
+  <br />
+  <br />
+  <div id="dev-mode" style="font-size:36px"></div>
 </body>
 
 </html>

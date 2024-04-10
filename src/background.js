@@ -1,6 +1,28 @@
-let local = true
-// let local = false
-const HOST = local ? 'http://localhost:3000' : "https://www.easelonchrome.com"
+const getURIOLD = (suffix) => {
+    return chrome.storage.sync.get('_EAC_LOCAL_MODE', function ({ _EAC_LOCAL_MODE }) {
+        console.log('_EAC_LOCAL_MODE: ', _EAC_LOCAL_MODE)
+        LOCAL = _EAC_LOCAL_MODE
+        const HOST = LOCAL ? 'http://localhost:3000' : "https://www.easelonchrome.com"
+        console.log('HOST in bg: ', HOST)
+        return `${HOST}${suffix}`
+    })
+    // console.log('LOCAL outside: ', LOCAL)
+}
+
+const getURI = async (suffix) => {
+    return new Promise((resolve, reject) => {
+        chrome.storage.sync.get('_EAC_LOCAL_MODE', function (data) {
+            const _EAC_LOCAL_MODE = data['_EAC_LOCAL_MODE'];
+            console.log('_EAC_LOCAL_MODE: ', _EAC_LOCAL_MODE)
+            LOCAL = _EAC_LOCAL_MODE;
+            const HOST = LOCAL ? 'http://localhost:3000' : 'https://www.easelonchrome.com';
+            console.log('HOST in bg: ', HOST);
+            const uri = `${HOST}${suffix}`;
+            resolve(uri);
+        });
+    });
+};
+
 
 async function getUserIdFromStorage() {
     return new Promise((resolve, reject) => {
@@ -19,7 +41,9 @@ async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData
     const user_details = await getUserIdFromStorage();
     const { user_id } = user_details;
 
-    const URI = `${HOST}/api/handle-refresh-snapshot`
+    const URI = await getURI('/api/handle-refresh-snapshot')
+    console.log('getURI result: ', URI)
+    // const URI = `${HOST}/api/handle-refresh-snapshot`
 
     const response = await fetch(URI, {
         method: "POST",
@@ -38,7 +62,7 @@ async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData
     })
 
     if (!response.ok) {
-        console.log("ERROR handle-refresh-snapshot: ", await response.text())
+        console.error("handle-refresh-snapshot: ", await response.text())
         return;
     }
 
@@ -51,7 +75,9 @@ async function saveSnapshot({ snapshotBase64, url, rectData, screenData }) {
     const user_details = await getUserIdFromStorage();
     const { user_id } = user_details;
 
-    const URI = `${HOST}/api/handle-brand-new-snapshot`
+    // const URI = `${HOST}/api/handle-brand-new-snapshot`
+    const URI = await getURI('/api/handle-brand-new-snapshot')
+    console.log('getURI 2 result: ', URI)
 
     const response = await fetch(URI, {
         method: "POST",
@@ -111,7 +137,10 @@ chrome.runtime.onMessage.addListener((async function (event, target, sendRespons
             }
             await saveSnapshot(payload)
 
-            const newURL = `${HOST}/dashboard`
+            // const newURL = `${HOST}/dashboard`
+            const newURL = await getURI('/dashboard')
+            console.log('getURI 3 result: ', newURL)
+
             chrome.tabs.create({ url: newURL });
         }))
     }
@@ -162,7 +191,6 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
     }
 
     if (msg.command === "userSignedOut") {
-        console.log('user has signed out')
         chrome.storage.sync.set({ user_details: {} }, function () {
             console.log('User ID removed');
         });
@@ -183,7 +211,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         })
 
         if (!response2.ok) {
-            console.log("ERROR jwt decrypt: ", await response2.text())
+            console.error("jwt decrypt: ", await response2.text())
             return;
         }
 
@@ -192,7 +220,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
 
         const parsed = JSON.parse(result2.sub)
         chrome.storage.sync.set({ user_details: parsed, snapshotCount, planName }, function () {
-            console.log('User ID stored successfully');
+            console.log('User ID stored');
         });
 
         sendResponse({ success: "true" })
@@ -238,14 +266,14 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         chrome.windows.update(newWindowId, { width: screenData.screenWidth, height: screenData.screenHeight });
 
         const domainName = url.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0]
-        const timeout = timeoutMap[domainName] || timeoutMap.default || 3000;
+        const timeout = timeoutMap[domainName] || timeoutMap.default || 5000;
 
         await chrome.scripting.executeScript({
             target: { tabId: newTabId },
             func: handleScroll,
             args: [rectData.scrollTop]
         });
-        console.log(`waiting ${timeout} ${url}`)
+
         await new Promise(resolve => setTimeout(resolve, timeout));
 
         try {

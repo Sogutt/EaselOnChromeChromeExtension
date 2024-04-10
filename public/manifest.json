@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Easel On Chrome Extension",
-  "version": "0.1.0",
+  "name": "Easel On Chrome",
+  "version": "1.1.2",
   "description": "Capture live snapshots from around the web",
   "icons": {
     "16": "icons/favicon-16.png",
@@ -13,18 +13,15 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Easel On Chrome - chrome extension",
+    "default_title": "Easel On Chrome",
     "default_popup": "popup.html"
   },
   "host_permissions": [
     "<all_urls>"
   ],
   "permissions": [
-    "tabs",
-    "activeTab",
     "scripting",
-    "storage",
-    "cookies"
+    "storage"
   ],
   "externally_connectable": {
     "matches": [

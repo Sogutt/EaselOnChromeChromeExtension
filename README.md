@@ -11,5 +11,10 @@ Run via: npm run watch
 
 This project was bootstrapped with [Chrome Extension CLI](https://github.com/dutiyesh/chrome-extension-cli)
 
-"declarativeNetRequestWithHostAccess",
-"webRequest"
+
+# Pre-publish guide
+1. Ensure local mode is set to false
+2. To publish
+    a. npm run build
+    b. num run pack
+
