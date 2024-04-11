@@ -1,14 +1,3 @@
-const getURIOLD = (suffix) => {
-    return chrome.storage.sync.get('_EAC_LOCAL_MODE', function ({ _EAC_LOCAL_MODE }) {
-        console.log('_EAC_LOCAL_MODE: ', _EAC_LOCAL_MODE)
-        LOCAL = _EAC_LOCAL_MODE
-        const HOST = LOCAL ? 'http://localhost:3000' : "https://www.easelonchrome.com"
-        console.log('HOST in bg: ', HOST)
-        return `${HOST}${suffix}`
-    })
-    // console.log('LOCAL outside: ', LOCAL)
-}
-
 const getURI = async (suffix) => {
     return new Promise((resolve, reject) => {
         chrome.storage.sync.get('_EAC_LOCAL_MODE', function (data) {
@@ -27,6 +16,7 @@ const getURI = async (suffix) => {
 async function getUserIdFromStorage() {
     return new Promise((resolve, reject) => {
         chrome.storage.sync.get('user_details', function (data) {
+            console.log('getting user Id from storage: ', data)
             if (chrome.runtime.lastError) {
                 reject(chrome.runtime.lastError);
             } else {
@@ -39,11 +29,16 @@ async function getUserIdFromStorage() {
 async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData, snapshotVersion, portal_id }) {
 
     const user_details = await getUserIdFromStorage();
-    const { user_id } = user_details;
+    const { user_id } = user_details ?? {};
 
     const URI = await getURI('/api/handle-refresh-snapshot')
     console.log('getURI result: ', URI)
     // const URI = `${HOST}/api/handle-refresh-snapshot`
+
+    if (!user_id) {
+        console.error('saveRefreshedSnapshot - user_id is null')
+        return
+    }
 
     const response = await fetch(URI, {
         method: "POST",
@@ -73,11 +68,16 @@ async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData
 async function saveSnapshot({ snapshotBase64, url, rectData, screenData }) {
 
     const user_details = await getUserIdFromStorage();
-    const { user_id } = user_details;
+    const { user_id } = user_details ?? {};
 
     // const URI = `${HOST}/api/handle-brand-new-snapshot`
     const URI = await getURI('/api/handle-brand-new-snapshot')
     console.log('getURI 2 result: ', URI)
+
+    if (!user_id) {
+        console.error('saveSnapshot - user_id is null')
+        return
+    }
 
     const response = await fetch(URI, {
         method: "POST",
@@ -154,35 +154,37 @@ function handleScroll(scrollTop) {
 }
 
 
-function captureTab(newWindowId, currentWindowId) {
-    return new Promise(((resolve, reject) => {
-        chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (function (imageData) {
-            const lastError = chrome.runtime.lastError;
-            if (lastError) {
-                console.error("captureTab: ", lastError);
-                reject(lastError); // Reject with the error
-            } else if (!imageData) {
-                const error = new Error("Failed to capture tab.");
-                console.error(error);
-                reject(error); // Reject with a custom error if capturedImage is falsy
-            } else {
-                resolve(imageData)
-                chrome.windows.update(currentWindowId, { focused: true })
-                chrome.windows.remove(newWindowId)
-            }
-        }))
-    }))
-}
+// function captureTab(newWindowId, currentWindowId) {
+//     return new Promise(((resolve, reject) => {
+//         chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (function (imageData) {
+//             const lastError = chrome.runtime.lastError;
+//             if (lastError) {
+//                 console.error("cxaptureTab: ", lastError);
+//                 reject(lastError); // Reject with the error
+//             } else if (!imageData) {
+//                 const error = new Error("Failed to capture tab.");
+//                 console.error(error);
+//                 reject(error); // Reject with a custom error if capturedImage is falsy
+//             } else {
+//                 resolve(imageData)
+//                 chrome.windows.update(currentWindowId, { focused: true })
+//                 chrome.windows.remove(newWindowId)
+//             }
+//         }))
+//     }))
+// }
 
 
 chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendResponse) {
 
 
-
     if (msg.command === "isUserSignedIn") {
         const user_details = await getUserIdFromStorage();
-
-        const { user_id, user_email } = user_details;
+        console.log('user_details: ', user_details)
+        // const user_id = user_details?.user_id ?? null;
+        // const user_email = user_details?.user_email ?? null
+        const { user_id, user_email } = user_details ?? {};
+        // const { user_id, user_email } = user_details; OLD - this breaks
         if (!user_id || !user_email) {
             sendResponse({ user_id: null, user_email: null })
         } else {
@@ -277,18 +279,72 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         await new Promise(resolve => setTimeout(resolve, timeout));
 
         try {
-            const snapshotBase64 = await captureTab(newWindowId, currentWindowId);
+            chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (async function (imageData) {
+                const lastError = chrome.runtime.lastError;
+                if (lastError) {
+                    console.error("cxaptureTab: ", lastError);
+                } else if (!imageData) {
+                    const error = new Error("Failed to capture tab.");
+                    console.error(error);
+                } else {
+                    chrome.windows.update(currentWindowId, { focused: true })
+                    chrome.windows.remove(newWindowId)
 
-            const payload = {
-                snapshotBase64,
-                url,
-                rectData,
-                screenData,
-                snapshotVersion,
-                portal_id
-            };
-            await saveRefreshedSnapshot(payload);
-            sendResponse({ success: true });
+                    const user_details = await getUserIdFromStorage();
+                    const { user_id } = user_details ?? {};
+                    console.log('user_id: ', user_id)
+
+                    const URI = await getURI('/api/handle-refresh-snapshot')
+                    console.log('getURI result: ', URI)
+
+                    if (!user_id) {
+                        console.error('saveRefreshedSnapshot - user_id is null')
+                        return
+                    }
+
+                    console.log('pre fetch')
+                    const response = await fetch(URI, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            snapshotBase64: imageData,
+                            url,
+                            user_id,
+                            rectData,
+                            screenData,
+                            snapshotVersion,
+                            portal_id
+                        }),
+                    })
+
+                    if (!response.ok) {
+                        console.error("handle-refresh-snapshot: ", await response.text())
+                        return;
+                    }
+
+                    const { error } = await response.json();
+
+                    if (error) {
+                        sendResponse({ success: false, error });
+                        return
+                    }
+                    sendResponse({ success: true });
+                }
+            }))
+            // const snapshotBase64 = await cxaptureTab(newWindowId, currentWindowId);
+
+            // const payload = {
+            //     snapshotBase64,
+            //     url,
+            //     rectData,
+            //     screenData,
+            //     snapshotVersion,
+            //     portal_id
+            // };
+            // await saveRefreshedSnapshot(payload);
+            // sendResponse({ success: true });
         } catch (error) {
             sendResponse({ error });
             console.error("refreshPortal:", error);

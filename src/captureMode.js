@@ -7,7 +7,7 @@ const infoModalStyle = `
   left: 50%;
   transform: translate(-50%);
   z-index: 99999;
-  width:400px;
+  width:500px;
   height:40px;
   background-color:#f97316;
   color:white;
@@ -25,7 +25,7 @@ const infoModalStyle = `
 `;
 var infoModal = document.createElement('div');
 infoModal.setAttribute('style', infoModalStyle);
-infoModal.innerText= 'Click anywhere and drag to capture a snapshot!'
+infoModal.innerText = 'Click anywhere and drag to capture a snapshot! Press Esc key to cancel'
 document.body.appendChild(infoModal);
 
 
@@ -59,7 +59,7 @@ function keyDownTextField(event) {
 }
 
 
-function cleanup(scrollTop) {
+async function cleanup(scrollTop) {
 
     document.body.style.userSelect = '';
     document.removeEventListener('mousedown', onMouseDown);
@@ -69,7 +69,8 @@ function cleanup(scrollTop) {
     infoModal.remove()
     document.body.style.cursor = 'auto';
 
-    if (startX === endX && startY === endY) {
+    console.log('startX === endX && startY === endY: ', startX, endX, startY, endY)
+    if ((!startX || !endX || !startY || !endY) || (startX === endX && startY === endY)) {
         console.log('no area captured')
         return;
     }
@@ -93,6 +94,34 @@ function cleanup(scrollTop) {
         rectData,
         screenData: { screenWidth, screenHeight, pixelRatio },
     });
+
+    const successToastStyle = `
+  position: fixed;
+  top: 7%;
+  left: 50%;
+  transform: translate(-50%);
+  width:300px;
+  height:40px;
+  background-color:#f97316;
+  color:white;
+  font-size: 14px;
+  font-weight:bold;
+  border-radius: 10px;
+  padding: 2px 10px 2px 10px;  
+  display:flex;
+  flex-direction:row;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  box-shadow: rgba(0, 0, 0, 0.50) 0px 5px 15px;
+  z-index: 99999;
+`;
+    var successToast = document.createElement('div');
+    successToast.setAttribute('style', successToastStyle);
+    successToast.innerText = 'Snapshot captured! Opening dashboard'
+    document.body.appendChild(successToast);
+    await new Promise(resolve => setTimeout(resolve, 2700));
+    successToast.remove()
 }
 
 
