@@ -1,4 +1,4 @@
-console.log('captureMode')
+// console.log('captureMode')
 document.body.style.userSelect = 'none';
 document.body.style.cursor = 'crosshair'; // Change cursor to pointer
 const infoModalStyle = `
@@ -69,7 +69,7 @@ async function cleanup(scrollTop) {
     infoModal.remove()
     document.body.style.cursor = 'auto';
 
-    console.log('startX === endX && startY === endY: ', startX, endX, startY, endY)
+    // console.log('startX === endX && startY === endY: ', startX, endX, startY, endY)
     if ((!startX || !endX || !startY || !endY) || (startX === endX && startY === endY)) {
         console.log('no area captured')
         return;

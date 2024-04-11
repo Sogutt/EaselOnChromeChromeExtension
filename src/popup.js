@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const redirectButton = document.getElementById('redirect-button');
     const welcomeMessage = document.getElementById("welcome-message")
 
-    console.log('takeSnapshotButton: ', takeSnapshotButton)
+    // console.log('takeSnapshotButton: ', takeSnapshotButton)
 
     takeSnapshotButton.disabled = false
 
