@@ -154,25 +154,25 @@ function handleScroll(scrollTop) {
 }
 
 
-// function captureTab(newWindowId, currentWindowId) {
-//     return new Promise(((resolve, reject) => {
-//         chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (function (imageData) {
-//             const lastError = chrome.runtime.lastError;
-//             if (lastError) {
-//                 console.error("cxaptureTab: ", lastError);
-//                 reject(lastError); // Reject with the error
-//             } else if (!imageData) {
-//                 const error = new Error("Failed to capture tab.");
-//                 console.error(error);
-//                 reject(error); // Reject with a custom error if capturedImage is falsy
-//             } else {
-//                 resolve(imageData)
-//                 chrome.windows.update(currentWindowId, { focused: true })
-//                 chrome.windows.remove(newWindowId)
-//             }
-//         }))
-//     }))
-// }
+function captureTab(newWindowId, currentWindowId) {
+    return new Promise(((resolve, reject) => {
+        chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (function (imageData) {
+            const lastError = chrome.runtime.lastError;
+            if (lastError) {
+                console.error("cxaptureTab: ", lastError);
+                reject(lastError); // Reject with the error
+            } else if (!imageData) {
+                const error = new Error("Failed to capture tab.");
+                console.error(error);
+                reject(error); // Reject with a custom error if capturedImage is falsy
+            } else {
+                resolve(imageData)
+                chrome.windows.update(currentWindowId, { focused: true })
+                chrome.windows.remove(newWindowId)
+            }
+        }))
+    }))
+}
 
 
 chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendResponse) {
@@ -279,72 +279,19 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         await new Promise(resolve => setTimeout(resolve, timeout));
 
         try {
-            chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (async function (imageData) {
-                const lastError = chrome.runtime.lastError;
-                if (lastError) {
-                    console.error("cxaptureTab: ", lastError);
-                } else if (!imageData) {
-                    const error = new Error("Failed to capture tab.");
-                    console.error(error);
-                } else {
-                    chrome.windows.update(currentWindowId, { focused: true })
-                    chrome.windows.remove(newWindowId)
+            const snapshotBase64 = await captureTab(newWindowId, currentWindowId);
 
-                    const user_details = await getUserIdFromStorage();
-                    const { user_id } = user_details ?? {};
-                    console.log('user_id: ', user_id)
+            const payload = {
+                snapshotBase64,
+                url,
+                rectData,
+                screenData,
+                snapshotVersion,
+                portal_id
+            };
 
-                    const URI = await getURI('/api/handle-refresh-snapshot')
-                    console.log('getURI result: ', URI)
-
-                    if (!user_id) {
-                        console.error('saveRefreshedSnapshot - user_id is null')
-                        return
-                    }
-
-                    console.log('pre fetch')
-                    const response = await fetch(URI, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            snapshotBase64: imageData,
-                            url,
-                            user_id,
-                            rectData,
-                            screenData,
-                            snapshotVersion,
-                            portal_id
-                        }),
-                    })
-
-                    if (!response.ok) {
-                        console.error("handle-refresh-snapshot: ", await response.text())
-                        return;
-                    }
-
-                    const { error } = await response.json();
-
-                    if (error) {
-                        sendResponse({ success: false, error });
-                        return
-                    }
-                    sendResponse({ success: true });
-                }
-            }))
-            // const snapshotBase64 = await cxaptureTab(newWindowId, currentWindowId);
-
-            // const payload = {
-            //     snapshotBase64,
-            //     url,
-            //     rectData,
-            //     screenData,
-            //     snapshotVersion,
-            //     portal_id
-            // };
-            // await saveRefreshedSnapshot(payload);
-            // sendResponse({ success: true });
+            await saveRefreshedSnapshot(payload);
+            sendResponse({ success: true });
         } catch (error) {
             sendResponse({ error });
             console.error("refreshPortal:", error);
