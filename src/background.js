@@ -176,7 +176,11 @@ function captureTab(newWindowId, currentWindowId) {
 
 
 chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendResponse) {
+    console.log('msg: ', msg)
 
+    if (msg.command === 'active_check') {
+        sendResponse({ extensionStatus: 'active' })
+    }
 
     if (msg.command === "isUserSignedIn") {
         const user_details = await getUserIdFromStorage();
