@@ -150,7 +150,7 @@ chrome.runtime.onMessage.addListener((async function (event, target, sendRespons
 function handleScroll(scrollTop) {
     setInterval((() => {
         window.scroll({ top: scrollTop, behavior: "instant" })
-    }), 500)
+    }), 100)
 }
 
 
@@ -158,8 +158,9 @@ function captureTab(newWindowId, currentWindowId) {
     return new Promise(((resolve, reject) => {
         chrome.tabs.captureVisibleTab(newWindowId, { format: "png" }, (function (imageData) {
             const lastError = chrome.runtime.lastError;
+            console.log('qq wtf: ', imageData, lastError)
             if (lastError) {
-                console.error("cxaptureTab: ", lastError);
+                console.error("cxaptureTab: ", lastError.message);
                 reject(lastError); // Reject with the error
             } else if (!imageData) {
                 const error = new Error("Failed to capture tab.");
@@ -234,9 +235,9 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
 
     if (msg.command === "createWindow") {
         const { url, screenData } = msg
-
+        console.log('url, screenData: ', url, screenData)
         chrome.windows.getCurrent({}, (function (t) {
-
+            console.log('t: ', t)
             if (t.state === "fullscreen") {
                 chrome.windows.update(t.id, { state: "normal" });
             }
@@ -252,6 +253,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
                 left: t.left,
                 top: t.top
             };
+            console.log('config: ', config)
 
             return chrome.windows.create(config, (function (e) {
                 sendResponse({
@@ -269,7 +271,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
 
         if (!newWindowId || newWindowId == "") return sendResponse({ error: "missing newWindowId" })
 
-        chrome.windows.update(newWindowId, { width: screenData.screenWidth, height: screenData.screenHeight });
+        // chrome.windows.update(newWindowId, { width: screenData.screenWidth, height: screenData.screenHeight });
 
         const domainName = url.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0]
         const timeout = timeoutMap[domainName] || timeoutMap.default || 5000;
@@ -281,8 +283,9 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         });
 
         await new Promise(resolve => setTimeout(resolve, timeout));
-
+        
         try {
+            chrome.windows.update(newWindowId, {focused:true})
             const snapshotBase64 = await captureTab(newWindowId, currentWindowId);
 
             const payload = {
