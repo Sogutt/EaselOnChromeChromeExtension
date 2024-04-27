@@ -2,10 +2,10 @@ const getURI = async (suffix) => {
     return new Promise((resolve, reject) => {
         chrome.storage.sync.get('_EAC_LOCAL_MODE', function (data) {
             const _EAC_LOCAL_MODE = data['_EAC_LOCAL_MODE'];
-            
+
             LOCAL = _EAC_LOCAL_MODE;
             const HOST = LOCAL ? 'http://localhost:3000' : 'https://www.easelonchrome.com';
-            
+
             const uri = `${HOST}${suffix}`;
             resolve(uri);
         });
@@ -16,7 +16,7 @@ const getURI = async (suffix) => {
 async function getUserIdFromStorage() {
     return new Promise((resolve, reject) => {
         chrome.storage.sync.get('user_details', function (data) {
-            
+
             if (chrome.runtime.lastError) {
                 reject(chrome.runtime.lastError);
             } else {
@@ -30,15 +30,15 @@ async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData
 
     const user_details = await getUserIdFromStorage();
     const { user_id } = user_details ?? {};
-
+    console.log('qq7')
     const URI = await getURI('/api/handle-refresh-snapshot')
-    
+
 
     if (!user_id) {
         console.error('saveRefreshedSnapshot - user_id is null')
         return
     }
-
+    console.log('qq8')
     const response = await fetch(URI, {
         method: "POST",
         headers: {
@@ -69,9 +69,9 @@ async function saveSnapshot({ snapshotBase64, url, rectData, screenData }) {
     const user_details = await getUserIdFromStorage();
     const { user_id } = user_details ?? {};
 
-    
+
     const URI = await getURI('/api/handle-brand-new-snapshot')
-    
+
 
     if (!user_id) {
         console.error('saveSnapshot - user_id is null')
@@ -137,7 +137,7 @@ chrome.runtime.onMessage.addListener((async function (event, target, sendRespons
             await saveSnapshot(payload)
 
             const newURL = await getURI('/dashboard')
-            
+
             chrome.tabs.create({ url: newURL });
         }))
     }
@@ -173,7 +173,7 @@ function captureTab(newWindowId, currentWindowId) {
 
 
 chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendResponse) {
-    
+
 
     if (msg.command === 'active_check') {
         sendResponse({ extensionStatus: 'active' })
@@ -181,12 +181,12 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
 
     if (msg.command === "isUserSignedIn") {
         const user_details = await getUserIdFromStorage();
-        
+
         // const user_id = user_details?.user_id ?? null;
         // const user_email = user_details?.user_email ?? null
         // const { user_id, user_email } = user_details; --> this breaks without nullish coalesce op
         const { user_id, user_email } = user_details ?? {};
-        
+
         if (!user_id || !user_email) {
             sendResponse({ user_id: null, user_email: null })
         } else {
@@ -219,15 +219,85 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
             return;
         }
 
-        const { decryptResult } = await decryptResponse.json();
+        const { result2 } = await decryptResponse.json();
 
 
-        const parsed = JSON.parse(decryptResult.sub)
+        const parsed = JSON.parse(result2.sub)
         chrome.storage.sync.set({ user_details: parsed, snapshotCount, planName }, function () {
             console.log('User ID stored');
         });
 
         sendResponse({ success: "true" })
+    }
+
+    if (msg.command === "refresh") {
+        console.log('in new refresh')
+
+        const {
+            url,
+            screenData,
+            rectData,
+            timeoutMap,
+            snapshotVersion,
+            portal_id } = msg
+
+
+        console.log('qq1')
+        const domainName = url.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0]
+        const timeout = timeoutMap[domainName] || timeoutMap.default || 5000;
+
+
+        console.log('qq2')
+        chrome.windows.getCurrent({}, (function (currentWindow) {
+
+            if (currentWindow.state === "fullscreen") {
+                chrome.windows.update(currentWindow.id, { state: "normal" });
+            }
+            console.log('qq3')
+            const currentWindowId = currentWindow.id
+
+            const config = {
+                url,
+                focused: false,
+                width: screenData.screenWidth ?? 1,
+                height: screenData.screenHeight ?? 1,
+                type: "normal",
+                left: currentWindow.left,
+                top: currentWindow.top
+            };
+            console.log('qq4')
+            return chrome.windows.create(config, (async function (newWindow) {
+                const newWindowId = newWindow.id
+                const newTabId = newWindow.tabs[0].id
+
+                await new Promise(resolve => setTimeout(resolve, timeout));
+                await chrome.scripting.executeScript({
+                    target: { tabId: newTabId },
+                    func: handleScroll,
+                    args: [rectData.scrollTop]
+                });
+                console.log('qq5')
+                try {
+                    const snapshotBase64 = await captureTab(newWindowId, currentWindowId);
+
+                    const payload = {
+                        snapshotBase64,
+                        url,
+                        rectData,
+                        screenData,
+                        snapshotVersion,
+                        portal_id
+                    };
+                    console.log('qq6: ', payload)
+                    await saveRefreshedSnapshot(payload);
+                    sendResponse({ success: true });
+                } catch (error) {
+                    sendResponse({ error });
+                    console.error("QQ refreshPortal:", error);
+                }
+            }))
+
+        }));
     }
 
     if (msg.command === "createWindow") {
