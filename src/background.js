@@ -2,10 +2,10 @@ const getURI = async (suffix) => {
     return new Promise((resolve, reject) => {
         chrome.storage.sync.get('_EAC_LOCAL_MODE', function (data) {
             const _EAC_LOCAL_MODE = data['_EAC_LOCAL_MODE'];
-            console.log('_EAC_LOCAL_MODE: ', _EAC_LOCAL_MODE)
+            
             LOCAL = _EAC_LOCAL_MODE;
             const HOST = LOCAL ? 'http://localhost:3000' : 'https://www.easelonchrome.com';
-            console.log('HOST in bg: ', HOST);
+            
             const uri = `${HOST}${suffix}`;
             resolve(uri);
         });
@@ -16,7 +16,7 @@ const getURI = async (suffix) => {
 async function getUserIdFromStorage() {
     return new Promise((resolve, reject) => {
         chrome.storage.sync.get('user_details', function (data) {
-            console.log('getting user Id from storage: ', data)
+            
             if (chrome.runtime.lastError) {
                 reject(chrome.runtime.lastError);
             } else {
@@ -32,8 +32,7 @@ async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData
     const { user_id } = user_details ?? {};
 
     const URI = await getURI('/api/handle-refresh-snapshot')
-    console.log('getURI result: ', URI)
-    // const URI = `${HOST}/api/handle-refresh-snapshot`
+    
 
     if (!user_id) {
         console.error('saveRefreshedSnapshot - user_id is null')
@@ -70,9 +69,9 @@ async function saveSnapshot({ snapshotBase64, url, rectData, screenData }) {
     const user_details = await getUserIdFromStorage();
     const { user_id } = user_details ?? {};
 
-    // const URI = `${HOST}/api/handle-brand-new-snapshot`
+    
     const URI = await getURI('/api/handle-brand-new-snapshot')
-    console.log('getURI 2 result: ', URI)
+    
 
     if (!user_id) {
         console.error('saveSnapshot - user_id is null')
@@ -137,10 +136,8 @@ chrome.runtime.onMessage.addListener((async function (event, target, sendRespons
             }
             await saveSnapshot(payload)
 
-            // const newURL = `${HOST}/dashboard`
             const newURL = await getURI('/dashboard')
-            console.log('getURI 3 result: ', newURL)
-
+            
             chrome.tabs.create({ url: newURL });
         }))
     }
@@ -160,11 +157,11 @@ function captureTab(newWindowId, currentWindowId) {
             const lastError = chrome.runtime.lastError;
             if (lastError) {
                 console.error("cxaptureTab: ", lastError);
-                reject(lastError); // Reject with the error
+                reject(lastError);
             } else if (!imageData) {
                 const error = new Error("Failed to capture tab.");
                 console.error(error);
-                reject(error); // Reject with a custom error if capturedImage is falsy
+                reject(error);
             } else {
                 resolve(imageData)
                 chrome.windows.update(currentWindowId, { focused: true })
@@ -176,7 +173,7 @@ function captureTab(newWindowId, currentWindowId) {
 
 
 chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendResponse) {
-    console.log('msg: ', msg)
+    
 
     if (msg.command === 'active_check') {
         sendResponse({ extensionStatus: 'active' })
@@ -184,11 +181,12 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
 
     if (msg.command === "isUserSignedIn") {
         const user_details = await getUserIdFromStorage();
-        console.log('user_details: ', user_details)
+        
         // const user_id = user_details?.user_id ?? null;
         // const user_email = user_details?.user_email ?? null
+        // const { user_id, user_email } = user_details; --> this breaks without nullish coalesce op
         const { user_id, user_email } = user_details ?? {};
-        // const { user_id, user_email } = user_details; OLD - this breaks
+        
         if (!user_id || !user_email) {
             sendResponse({ user_id: null, user_email: null })
         } else {
@@ -208,7 +206,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         const snapshotCount = msg.snapshotCount
         const planName = msg.planName
 
-        const response2 = await fetch("https://easelon-chrome.vercel.app/api/decrypt", {
+        const decryptResponse = await fetch("https://easelon-chrome.vercel.app/api/decrypt", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -216,15 +214,15 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
             body: JSON.stringify({ jwe: nestedJWT }),
         })
 
-        if (!response2.ok) {
-            console.error("jwt decrypt: ", await response2.text())
+        if (!decryptResponse.ok) {
+            console.error("jwt decrypt: ", await decryptResponse.text())
             return;
         }
 
-        const { result2 } = await response2.json();
+        const { decryptResult } = await decryptResponse.json();
 
 
-        const parsed = JSON.parse(result2.sub)
+        const parsed = JSON.parse(decryptResult.sub)
         chrome.storage.sync.set({ user_details: parsed, snapshotCount, planName }, function () {
             console.log('User ID stored');
         });
