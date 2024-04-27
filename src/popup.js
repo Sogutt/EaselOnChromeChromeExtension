@@ -50,8 +50,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    let IS_LOCAL = true
-    // let IS_LOCAL = false
+    // let IS_LOCAL = true
+    let IS_LOCAL = false
     chrome.storage.sync.set({ _EAC_LOCAL_MODE: IS_LOCAL }, function () {
         if (IS_LOCAL) {
             devModeInfo.innerText = `LOCAL MODE`
