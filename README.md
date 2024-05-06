@@ -1,4 +1,4 @@
-# <img src="public/icons/icon_96.png" width="45" align="left"> Easel On Chrome Extension
+# <img src="public/icons/icon_32.png" width="32" align="left"> Easel On Chrome Extension
 
 ## Install
 
