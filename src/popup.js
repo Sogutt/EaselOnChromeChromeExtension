@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const redirectButton = document.getElementById('redirect-button');
     const welcomeMessage = document.getElementById("welcome-message")
 
-    // console.log('takeSnapshotButton: ', takeSnapshotButton)
+    
 
     takeSnapshotButton.disabled = false
 
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     chrome.storage.sync.get('user_details', function (data) {
-        console.log('user details data: ', data)
+        // console.log('user details data: ', data)
         const user_email = data?.user_details?.user_email ?? null
         // const { user_email } = data?.user_details
         if (user_email) {
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     })
 
     chrome.storage.sync.get(['snapshotCount', 'planName'], function (data) {
-        console.log('snapshotCount data: ', data)
+        // console.log('snapshotCount data: ', data)
         if (!data) return;
         const { snapshotCount, planName } = data
 

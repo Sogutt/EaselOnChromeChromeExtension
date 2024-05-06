@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Easel On Chrome",
-  "version": "1.4.6",
+  "version": "1.5.6",
   "description": "Capture live snapshots from around the web",
   "icons": {
     "16": "icons/favicon-16.png",
