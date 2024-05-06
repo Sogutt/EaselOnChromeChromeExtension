@@ -231,7 +231,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
     }
 
     if (msg.command === "refresh") {
-        console.log('in new refresh')
+        
 
         const {
             url,
