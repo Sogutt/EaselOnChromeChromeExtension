@@ -1,6 +1,6 @@
-// console.log('captureMode')
+
 document.body.style.userSelect = 'none';
-document.body.style.cursor = 'crosshair'; // Change cursor to pointer
+document.body.style.cursor = 'crosshair';
 const infoModalStyle = `
   position: fixed;
   bottom: 7%;

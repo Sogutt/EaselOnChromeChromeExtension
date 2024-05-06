@@ -30,7 +30,7 @@ async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData
 
     const user_details = await getUserIdFromStorage();
     const { user_id } = user_details ?? {};
-    console.log('qq7')
+    
     const URI = await getURI('/api/handle-refresh-snapshot')
 
 
@@ -38,7 +38,7 @@ async function saveRefreshedSnapshot({ snapshotBase64, url, rectData, screenData
         console.error('saveRefreshedSnapshot - user_id is null')
         return
     }
-    console.log('qq8')
+    
     const response = await fetch(URI, {
         method: "POST",
         headers: {
@@ -215,7 +215,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
         })
 
         if (!decryptResponse.ok) {
-            console.error("jwt decrypt: ", await decryptResponse.text())
+            console.error("jwt error: ", await decryptResponse.text())
             return;
         }
 
@@ -240,20 +240,18 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
             timeoutMap,
             snapshotVersion,
             portal_id } = msg
-
-
-        console.log('qq1')
+        
         const domainName = url.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0]
         const timeout = timeoutMap[domainName] || timeoutMap.default || 5000;
 
 
-        console.log('qq2')
+        
         chrome.windows.getCurrent({}, (function (currentWindow) {
 
             if (currentWindow.state === "fullscreen") {
                 chrome.windows.update(currentWindow.id, { state: "normal" });
             }
-            console.log('qq3')
+            
             const currentWindowId = currentWindow.id
 
             const config = {
@@ -265,7 +263,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
                 left: currentWindow.left,
                 top: currentWindow.top
             };
-            console.log('qq4')
+            
             return chrome.windows.create(config, (async function (newWindow) {
                 const newWindowId = newWindow.id
                 const newTabId = newWindow.tabs[0].id
@@ -276,7 +274,7 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
                     func: handleScroll,
                     args: [rectData.scrollTop]
                 });
-                console.log('qq5')
+                
                 try {
                     const snapshotBase64 = await captureTab(newWindowId, currentWindowId);
 
@@ -288,85 +286,15 @@ chrome.runtime.onMessageExternal.addListener((async function (msg, t, sendRespon
                         snapshotVersion,
                         portal_id
                     };
-                    console.log('qq6: ', payload)
+                    
                     await saveRefreshedSnapshot(payload);
                     sendResponse({ success: true });
                 } catch (error) {
                     sendResponse({ error });
-                    console.error("QQ refreshPortal:", error);
+                    console.error("refreshPortal:", error);
                 }
             }))
 
         }));
-    }
-
-    if (msg.command === "createWindow") {
-        const { url, screenData } = msg
-
-        chrome.windows.getCurrent({}, (function (t) {
-
-            if (t.state === "fullscreen") {
-                chrome.windows.update(t.id, { state: "normal" });
-            }
-
-            const currentWindowId = t.id
-
-            const config = {
-                url,
-                focused: false,
-                width: screenData.screenWidth ?? 1,
-                height: screenData.screenHeight ?? 1,
-                type: "normal",
-                left: t.left,
-                top: t.top
-            };
-
-            return chrome.windows.create(config, (function (e) {
-                sendResponse({
-                    newWindowId: e.id,
-                    newTabId: e.tabs[0].id,
-                    currentWindowId: currentWindowId
-                })
-            }))
-        }));
-    }
-
-    if (msg.command === "refreshPortal") {
-
-        const { url, screenData, rectData, timeoutMap, newWindowId, newTabId, currentWindowId, snapshotVersion, portal_id } = msg
-
-        if (!newWindowId || newWindowId == "") return sendResponse({ error: "missing newWindowId" })
-
-        chrome.windows.update(newWindowId, { width: screenData.screenWidth, height: screenData.screenHeight });
-
-        const domainName = url.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0]
-        const timeout = timeoutMap[domainName] || timeoutMap.default || 5000;
-
-        await chrome.scripting.executeScript({
-            target: { tabId: newTabId },
-            func: handleScroll,
-            args: [rectData.scrollTop]
-        });
-
-        await new Promise(resolve => setTimeout(resolve, timeout));
-
-        try {
-            const snapshotBase64 = await captureTab(newWindowId, currentWindowId);
-
-            const payload = {
-                snapshotBase64,
-                url,
-                rectData,
-                screenData,
-                snapshotVersion,
-                portal_id
-            };
-
-            await saveRefreshedSnapshot(payload);
-            sendResponse({ success: true });
-        } catch (error) {
-            sendResponse({ error });
-            console.error("refreshPortal:", error);
-        }
     }
 }))
