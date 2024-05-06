@@ -1,20 +1,16 @@
-# <img src="public/icons/icon_48.png" width="45" align="left"> Easel On Chrome Extension
-
-Easel on Chrome 
-
-Run via: npm run watch
+# <img src="public/icons/icon_96.png" width="45" align="left"> Easel On Chrome Extension
 
 ## Install
 
-[**Chrome** extension]() <!-- TODO: Add chrome extension link inside parenthesis -->
+[**Chrome** extension](https://chromewebstore.google.com/detail/easel-on-chrome/klikjkmgofmgidffkifbjofiihmpdmbl) <!-- TODO: Add chrome extension link inside parenthesis -->
 
 
 This project was bootstrapped with [Chrome Extension CLI](https://github.com/dutiyesh/chrome-extension-cli)
 
-
-# Pre-publish guide
+## For Devs Only
 1. Ensure local mode is set to false
 2. To publish
-    a. npm run build
-    b. num run pack
+    a. npm run watch
+    b. npm run build
+    c. num run pack
 
